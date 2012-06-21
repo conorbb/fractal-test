@@ -22,6 +22,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 //import android.graphics.Color;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 
 public class FractalView extends View{
@@ -46,6 +47,7 @@ public class FractalView extends View{
 	FractalView mFView;
 	private Bitmap zoomInBitmap;
 	private Bitmap zoomOutBitmap;
+	private Bitmap changeColorsBitmap;
 
 	//TODO Find why I need Image type.
 	//private Image image; // offscreen image for double buffering
@@ -75,6 +77,7 @@ public class FractalView extends View{
 		Resources res = this.getContext().getResources();
 		zoomInBitmap = BitmapFactory.decodeResource(res,R.drawable.in);
 		zoomOutBitmap = BitmapFactory.decodeResource(res,R.drawable.out);
+		changeColorsBitmap = BitmapFactory.decodeResource(res,R.drawable.colors); 
 		mPaint = new Paint();
 		// initialize color palates
 		mFView=this;
@@ -98,13 +101,28 @@ public class FractalView extends View{
 			}
 		}
 		
-		this.setOnClickListener(new OnClickListener() {
+		
+		this.setOnTouchListener(new OnTouchListener() {
 			
-			public void onClick(View v) {
+			public boolean onTouch(View v, MotionEvent event) {
+				int x,y;
+				Rect r = new Rect();
 				
-				nextPalette();
-				mFView.invalidate();
+				x = Math.round(event.getX());
+				y = Math.round(event.getY());
 				
+				if( new Rect(v.getRight()-160, v.getBottom() -80, v.getRight()-80, v.getBottom()).contains(x, y)){
+					zoomIn();
+				}
+				else if(new Rect(v.getRight()-80, v.getBottom() -80, v.getRight(), v.getBottom()).contains(x, y)){
+					zoomOut();
+				}
+				else if(new Rect(v.getRight()-240, v.getBottom() -80, v.getRight()-160, v.getBottom()).contains(x, y)){
+					nextPalette();
+					mFView.invalidate();
+				}
+				
+				return false;
 			}
 		});
 		
@@ -118,6 +136,20 @@ public class FractalView extends View{
 
 	private void nextPalette() {
 		pal = (pal + 1) % colors.length;
+	}
+	
+	private void zoomOut(){
+	      viewX -= 0.5 * zoom;
+	      viewY -= 0.5 * zoom;
+	      zoom *= 2.0;
+	      this.invalidate(); 
+	}
+	
+	private void zoomIn(){
+	      viewX += 0.25 * zoom;
+	      viewY += 0.25 * zoom;
+	      zoom *= 0.5;
+	      this.invalidate(); 
 	}
 
 	private static final int[][] rows = {
@@ -240,6 +272,8 @@ public class FractalView extends View{
 		
 		canvas.drawBitmap(zoomInBitmap, null, new Rect(rect.right-160, rect.bottom -80, rect.right-80, rect.bottom), mPaint);
 		canvas.drawBitmap(zoomOutBitmap, null, new Rect(rect.right-80, rect.bottom -80, rect.right, rect.bottom), mPaint);
+		canvas.drawBitmap(changeColorsBitmap, null, new Rect(rect.right-240, rect.bottom -80, rect.right-160, rect.bottom), mPaint);
+		
 	}
 
 	// * 	int alpha=argb>>24;					OR int alpha=argb>>24;	
