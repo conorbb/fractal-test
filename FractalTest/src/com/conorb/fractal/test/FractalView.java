@@ -18,9 +18,11 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 //import android.graphics.Color;
+//import android.provider.Settings.System;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -35,6 +37,7 @@ public class FractalView extends View{
 	private MyColor[][] colors; // palettes
 	private int pal = 0; // current palette
 	private Paint mPaint;
+	private long numDraws;
 
 
 	// julia set variables
@@ -78,6 +81,7 @@ public class FractalView extends View{
 		zoomInBitmap = BitmapFactory.decodeResource(res,R.drawable.in);
 		zoomOutBitmap = BitmapFactory.decodeResource(res,R.drawable.out);
 		changeColorsBitmap = BitmapFactory.decodeResource(res,R.drawable.colors); 
+		numDraws = 0;
 		mPaint = new Paint();
 		// initialize color palates
 		mFView=this;
@@ -213,7 +217,10 @@ public class FractalView extends View{
 
 	@Override
 	protected void onDraw(Canvas canvas) {
+		
 		super.onDraw(canvas);
+		long startTime = System.currentTimeMillis();
+
 		//Dimension size = getSize();
 
 
@@ -269,10 +276,13 @@ public class FractalView extends View{
 			//repaint();
 		}
 		//return false;
-		
+		numDraws++;
 		canvas.drawBitmap(zoomInBitmap, null, new Rect(rect.right-160, rect.bottom -80, rect.right-80, rect.bottom), mPaint);
 		canvas.drawBitmap(zoomOutBitmap, null, new Rect(rect.right-80, rect.bottom -80, rect.right, rect.bottom), mPaint);
 		canvas.drawBitmap(changeColorsBitmap, null, new Rect(rect.right-240, rect.bottom -80, rect.right-160, rect.bottom), mPaint);
+		mPaint.setColor(Color.WHITE);
+		canvas.drawText("Num Draws: " + numDraws , 15f, 15f, mPaint);
+		canvas.drawText("Draw time: " + (System.currentTimeMillis()-startTime) + "ms", 15f, 30f, mPaint);
 		
 	}
 
