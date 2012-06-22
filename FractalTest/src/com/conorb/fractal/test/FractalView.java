@@ -41,7 +41,7 @@ public class FractalView extends View{
 
 
 	// julia set variables
-	private boolean julia = true;
+	private boolean julia =false;
 	private double juliaX, juliaY;
 	// currently visible relative window dimensions
 	private double viewX = 0.0;
@@ -51,6 +51,9 @@ public class FractalView extends View{
 	private Bitmap zoomInBitmap;
 	private Bitmap zoomOutBitmap;
 	private Bitmap changeColorsBitmap;
+	private boolean fullDraw;
+	private boolean circleToDraw = false;
+	private float circlePositionX, circlePositionY;
 
 	//TODO Find why I need Image type.
 	//private Image image; // offscreen image for double buffering
@@ -103,6 +106,8 @@ public class FractalView extends View{
 							(c1[3] * (c1[0] - 1 - j) + c2[3] * j) / (c1[0] - 1));
 				n += c1[0];
 			}
+			setDrawingCacheEnabled(true);
+			fullDraw = true;
 		}
 		
 		
@@ -123,7 +128,10 @@ public class FractalView extends View{
 				}
 				else if(new Rect(v.getRight()-240, v.getBottom() -80, v.getRight()-160, v.getBottom()).contains(x, y)){
 					nextPalette();
-					mFView.invalidate();
+					
+				}
+				else{
+					drawCircle(event.getX(), event.getY());
 				}
 				
 				return false;
@@ -131,6 +139,14 @@ public class FractalView extends View{
 		});
 		
 
+	}
+	
+	private void drawCircle(float x, float y){
+		circleToDraw = true;
+		circlePositionX = x;
+		circlePositionY = y;
+		
+		invalidate();
 	}
 
 	private  MyColor getColor(int i) {
@@ -140,20 +156,24 @@ public class FractalView extends View{
 
 	private void nextPalette() {
 		pal = (pal + 1) % colors.length;
+		fullDraw = true;
+		invalidate();
 	}
 	
 	private void zoomOut(){
 	      viewX -= 0.5 * zoom;
 	      viewY -= 0.5 * zoom;
 	      zoom *= 2.0;
-	      this.invalidate(); 
+	      fullDraw = true;
+	      invalidate(); 
 	}
 	
 	private void zoomIn(){
 	      viewX += 0.25 * zoom;
 	      viewY += 0.25 * zoom;
 	      zoom *= 0.5;
-	      this.invalidate(); 
+	      fullDraw = true;
+	      invalidate(); 
 	}
 
 	private static final int[][] rows = {
@@ -219,19 +239,26 @@ public class FractalView extends View{
 	protected void onDraw(Canvas canvas) {
 		
 		super.onDraw(canvas);
+		Rect rect = canvas.getClipBounds();
+		if (rect.width() != width || rect.height() != height) {
+			width = rect.width();
+			height = rect.height();
+		}
 		long startTime = System.currentTimeMillis();
+			
+		if(fullDraw){
+			
+		
+		
 
 		//Dimension size = getSize();
 
 
 		// TODO REDUNDANT: create off screen buffer for double buffering
 
-		Rect rect = canvas.getClipBounds();
+		
 
-		if (rect.width() != width || rect.height() != height) {
-			width = rect.width();
-			height = rect.height();
-		}
+
 		// fractal image pre-drawing
 		double r = zoom / Math.min(width, height);
 		double sx = width > height ? 2.0 * r * (width - height) : 0.0;
@@ -273,16 +300,42 @@ public class FractalView extends View{
 					canvas.drawRect(x, y - rows[row][2] / 2, x+1,(y - rows[row][2] / 2) + (rows[row][2]),mPaint); // TODO check x+1 is ok..
 				}
 			}
-			//repaint();
 		}
-		//return false;
+		
+		if(circleToDraw){
+			mPaint.setColor(Color.WHITE);
+			canvas.drawCircle(circlePositionX, circlePositionY, 20, mPaint);
+			
+		}
 		numDraws++;
+		setDrawingCacheEnabled(true);
 		canvas.drawBitmap(zoomInBitmap, null, new Rect(rect.right-160, rect.bottom -80, rect.right-80, rect.bottom), mPaint);
 		canvas.drawBitmap(zoomOutBitmap, null, new Rect(rect.right-80, rect.bottom -80, rect.right, rect.bottom), mPaint);
 		canvas.drawBitmap(changeColorsBitmap, null, new Rect(rect.right-240, rect.bottom -80, rect.right-160, rect.bottom), mPaint);
 		mPaint.setColor(Color.WHITE);
 		canvas.drawText("Num Draws: " + numDraws , 15f, 15f, mPaint);
-		canvas.drawText("Draw time: " + (System.currentTimeMillis()-startTime) + "ms", 15f, 30f, mPaint);
+		canvas.drawText("Major Draw time: " + (System.currentTimeMillis()-startTime) + "ms", 15f, 30f, mPaint);
+		
+		
+			fullDraw = false;
+		}
+		else{
+			
+			Bitmap b = getDrawingCache();
+			if(b!=null){
+				canvas.drawBitmap(b, 0, 0, mPaint);
+			}
+
+		}
+		
+		if(circleToDraw){
+			mPaint.setColor(Color.WHITE);
+			canvas.drawCircle(circlePositionX, circlePositionY, 20, mPaint);
+			
+		}
+		
+
+
 		
 	}
 
