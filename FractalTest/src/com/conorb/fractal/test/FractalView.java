@@ -41,7 +41,7 @@ public class FractalView extends View{
 
 
 	// julia set variables
-	private boolean julia = false;
+	private boolean julia = true;
 	private double juliaX, juliaY;
 	// currently visible relative window dimensions
 	private double viewX = 0.0;
