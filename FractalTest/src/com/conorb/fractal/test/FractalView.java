@@ -58,6 +58,8 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 		private double viewX = 0.0;
 		private double viewY = 0.0;
 		private double zoom = 1.0;
+		
+		private double moveX, moveY;
 
 		//GUI related variables
 		FractalView mFView;
@@ -71,9 +73,13 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 		private SurfaceHolder mSurfaceHolder;
 		private Rect drawArea;
 
-		//thread related
+		//draw thread related
 		private boolean running;
-		private boolean drawNeeded;
+		private boolean fullDrawNeeded;
+		private boolean partialDrawNeeded;
+		private static final boolean DEBUG_TEXT = true;
+		
+		
 
 
 		private int width, height; // current screen width and height Populate in constructor?
@@ -107,21 +113,22 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 			changeColorsBitmap = BitmapFactory.decodeResource(res,R.drawable.colors); 
 			numDraws = 0;
 			mPaint = new Paint();
+			moveX = moveY = 0;
 			// initialize color palates
 
-			colors = new int[COLOR_PALETTE.length][];							//TODO stacked int here
+			colors = new int[COLOR_PALETTE.length][];							
 
 			for (int p = 0; p < COLOR_PALETTE.length; p++) { // process all palettes 
 				int n = 0;
 				for (int i = 0; i < COLOR_PALETTE[p].length; i++) // get the number of all colors
 					n += COLOR_PALETTE[p][i][0];
-				colors[p] = new int[n]; // allocate pallete 					//TODO stacked int here
+				colors[p] = new int[n]; // allocate pallete 					
 				n = 0;
 				for (int i = 0; i < COLOR_PALETTE[p].length; i++) { // interpolate all colors
 					int[] c1 = COLOR_PALETTE[p][i]; // first referential color
 					int[] c2 = COLOR_PALETTE[p][(i + 1) % COLOR_PALETTE[p].length]; // second ref. color
 					for (int j = 0; j < c1[0]; j++) // linear interpolation of RGB values
-						colors[p][n + j] = getColorAsInt(								//TODO stacked int here
+						colors[p][n + j] = getColorAsInt(								
 								(c1[1] * (c1[0] - 1 - j) + c2[1] * j) / (c1[0] - 1),
 								(c1[2] * (c1[0] - 1 - j) + c2[2] * j) / (c1[0] - 1),
 								(c1[3] * (c1[0] - 1 - j) + c2[3] * j) / (c1[0] - 1));
@@ -129,7 +136,7 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 				}
 				setDrawingCacheEnabled(true);
 				//fullDraw = true;
-				drawNeeded = true;
+				fullDrawNeeded = true;
 			}
 
 
@@ -147,9 +154,38 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 			circleToDraw = true;
 			circlePositionX = x;
 			circlePositionY = y;
-			drawNeeded = true;
+			fullDrawNeeded = true;
 		}
-		//TODO stacked int here
+		
+		private void setCenter(int x, int y){
+			int centerX, centerY;
+			
+
+			
+			//Get the center
+			centerX = drawArea.right/2;
+			centerY = drawArea.bottom/2;
+			
+			if(x > centerX){
+				moveX = (((double)x / drawArea.right) * 50)/100;
+			}
+			else{
+				moveX = (((double)Math.abs(x-centerX)/centerX)*50)/-100;
+			}
+			
+			if(y > centerY){
+				moveY = (((double)y / drawArea.bottom) * 50)/100;
+			}
+			else{
+				moveY = (((double)Math.abs(y-centerY) / centerY) * 50)/-100;
+			}
+			
+			viewX += moveX *zoom;
+			viewY += moveY*zoom;
+			fullDrawNeeded = true;
+				
+		}
+		
 		private  int getColor(int i) {
 			int palSize = colors[pal].length;
 			return colors[pal][(i + palSize) % palSize];
@@ -157,7 +193,7 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 
 		private void nextPalette() {
 			pal = (pal + 1) % colors.length;
-			drawNeeded = true;
+			fullDrawNeeded = true;
 		}
 
 		private void zoomOut(){
@@ -166,17 +202,18 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 			zoom *= 2.0;
 
 			//viewY=0;
-			drawNeeded = true;
+			fullDrawNeeded = true;
 
 		}
 
 		private void zoomIn(){
+			
 			viewX += 0.25 * zoom;
 			viewY += 0.25 * zoom;
 			zoom *= 0.5;
 
 			//viewY += 0.1;
-			drawNeeded = true;
+			fullDrawNeeded = true;
 
 		}
 
@@ -189,9 +226,11 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 				int color2 = getColor(count / 256 - 1);
 				int k1 = count % 256;
 				int k2 = 255 - k1;
-				//int red = (k1 * color.getRed() + k2 * color2.getRed()) / 255;
-				//int green = (k1 * color.getGreen() + k2 * color2.getGreen()) / 255;
-				//int blue = (k1 * color.getBlue() + k2 * color2.getBlue()) / 255;
+				
+				/*int red = (k1 * color.getRed() + k2 * color2.getRed()) / 255;
+				int green = (k1 * color.getGreen() + k2 * color2.getGreen()) / 255;
+				int blue = (k1 * color.getBlue() + k2 * color2.getBlue()) / 255;*/
+				
 				int red = ((k1 * (color & 0x00FF0000)>>16) + (k2 * (color2& 0x00FF0000)>>16)) / 255;
 				int green = ((k1 * (color & 0x0000FF00)>>8) + (k2 * (color2& 0x0000FF00)>>8)) / 255;
 				int blue = ((k1 * (color & 0x000000FF)) + (k2 * (color2& 0x000000FF))) / 255;
@@ -227,7 +266,6 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 			mSurfaceHolder = surfaceHolder;
 			mContext=context;
 
-			// TODO Auto-generated constructor stub
 			doSetup();
 		}
 
@@ -244,7 +282,7 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 				Canvas c = null;
 
 
-				if(drawNeeded){
+				if(fullDrawNeeded){
 
 					//Low quality fractal.
 					try {
@@ -389,15 +427,19 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 			canvas.drawBitmap(zoomOutBitmap, null, new Rect(drawArea.right-80, drawArea.bottom -80, drawArea.right, drawArea.bottom), mPaint);
 			canvas.drawBitmap(changeColorsBitmap, null, new Rect(drawArea.right-240, drawArea.bottom -80, drawArea.right-160, drawArea.bottom), mPaint);
 			mPaint.setColor(Color.WHITE);
-			canvas.drawText("Num Draws: " + numDraws , 15f, 15f, mPaint);
-			canvas.drawText("Major Draw time: " + (System.currentTimeMillis()-startTime) + "ms", 15f, 30f, mPaint);
-			canvas.drawText("Number of inner loop executes: " + itterationCount, 15f, 45f, mPaint);
+			if(DEBUG_TEXT){
+				canvas.drawText("ViewX: " + viewX +" ViewY: "+ viewY , 15f, 15f, mPaint);
+				canvas.drawText("Zoom: " + zoom , 15f, 30f, mPaint);
+				
+				canvas.drawText("Num Draws: " + numDraws , 15f, 45f, mPaint);
+				canvas.drawText("Move to X: " + moveX+" Y: "+ moveY, 15f, 60f, mPaint);
+			}
 
 			//Center dot
 			mPaint.setColor(Color.RED);
 			canvas.drawCircle(drawArea.right/2, drawArea.bottom/2, 4, mPaint);
 
-			drawNeeded = false;
+			fullDrawNeeded = false;
 			//Debug.stopMethodTracing();
 
 		}
@@ -431,6 +473,8 @@ public class FractalView extends SurfaceView implements SurfaceHolder.Callback{
 
 				}
 				else{
+					
+					setCenter(x, y);
 					drawCircle(x, y);
 				}
 
